@@ -1,22 +1,23 @@
 {
     "manifest_version": 3,
-    "name": "Inject JavaScript Extension",
-    "version": "1.0",
-    "description": "A simple extension that injects JS into a page.",
+    "name": "NTS Plus",
+    "version": "0.1",
+    "description": "Enhancements for NTS radio.",
     "content_scripts": [
       {
-        "matches": ["nts.live"],
+        "matches": ["https://www.nts.live/*"],
         "js": ["content.js"]
+      },
+      {
+        "matches": ["https://player-widget.mixcloud.com/*"],
+        "js": ["mixcloud.js"],
+        "all_frames": true
       }
     ],
     "permissions": [
       "activeTab"
     ],
-    "action": {
-      "default_popup": "popup.html"
-    },
     "host_permissions": [
-      "http://*/*",
-      "https://*/*"
+      "https://www.nts.live/*"
     ]
   }

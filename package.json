@@ -4,10 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "npx tsc"
+    "build": "npx tsc && cp manifest.json ./dist"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Kyle Petrovich",
+  "license": "MIT",
   "devDependencies": {
     "typescript": "5.7.3",
     "prettier": "3.4.2"
