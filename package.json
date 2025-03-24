@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "tsc -b && vite build --config vite.config.ts && vite build --config vite.config.content.ts && vite build --config vite.config.background.ts && cp manifest.json dist/manifest.json && cp ntsplus128.png dist/ntsplus128.png",
+        "build": "tsc -b && vite build --config vite.config.popup.ts && vite build --config vite.config.content.ts && vite build --config vite.config.background.ts && cp manifest.json dist/manifest.json && cp ntsplus128.png dist/ntsplus128.png",
         "lint": "eslint .",
         "preview": "vite preview"
     },

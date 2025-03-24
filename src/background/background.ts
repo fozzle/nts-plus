@@ -16,7 +16,6 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
         async function getToken() {
             await initDiscordAuth;
             const token = await discordAuth.getDiscordAccessToken(false);
-            console.log('sending response', token);
             sendResponse({ accessToken: token });
         }
         getToken();

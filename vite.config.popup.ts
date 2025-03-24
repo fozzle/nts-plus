@@ -6,6 +6,7 @@ import react from '@vitejs/plugin-react-swc'
 export default defineConfig({
   plugins: [react()],
   build: {
+    minify: false,
     rollupOptions: {
       input: {
         popup: fileURLToPath(new URL('./popup/popup.html', import.meta.url))
