@@ -1,17 +1,32 @@
 {
     "manifest_version": 3,
     "name": "NTS Plus",
-    "version": "0.1",
+    "version": "0.2",
     "description": "Enhancements for NTS radio.",
+    "icons": {
+      "128": "ntsplus128.png"
+    },
     "content_scripts": [
       {
         "matches": ["https://www.nts.live/*"],
-        "js": ["nts.js"]
+        "js": ["content_scripts/nts.js"]
       },
       {
         "matches": ["https://player-widget.mixcloud.com/*"],
-        "js": ["mixcloud.js"],
+        "js": ["content_scripts/mixcloud.js"],
         "all_frames": true
       }
-    ]
+    ],
+    "action": {
+      "default_popup": "popup/popup/popup.html"
+    },
+    "background": {
+      "service_worker": "background/background.js",
+      "type": "module"
+    },
+    "permissions": [
+      "identity",
+      "storage"
+    ],
+    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq7Rnvc4jMr9PQbjloe/I8GliYLpr8VP6njbbIONvgW5PLPTe2kE0eZ22wUbj9g95wIeVqliI/8ti586iNeb/pV61yLX5cuEqN3ugnu/Ctz6/1b96Qu4UwJH/SPsGm90E+Qa5vJqNwWbPmKBkXPZOw7eDRwGNLbsDmSTz1iXR73Ba0Nu4FxLuIAGlBasmwxeVH1+RTYmGv2pDtRqOQkojlQ7w3uQ45ER1cPZjNDFRx0sXv8B+5e+RnwLCVV8Kbn9sX9weYN+EyX/7hQ/bpP0STYrVZMMTH7qpwVi/B2DPpOR5aZkuh+80+fgJi8yf7uKp7eUUh8VGvLbdu6Ia5vJRAwIDAQAB"
   }

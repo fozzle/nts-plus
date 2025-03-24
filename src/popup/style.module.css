@@ -1,0 +1,30 @@
+.popup {
+    min-width: 200px;
+    min-height: 200px;
+    background-color: black;
+    color: white;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.userContainer {
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+    gap: 8px;
+}
+
+.avatar {
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background-color: black;
+}
