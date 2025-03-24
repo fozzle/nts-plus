@@ -47,6 +47,7 @@ async function authorizeDiscord() {
         code_challenge: codeChallenge,
     }).toString();
 
+    console.info('Launching authorization with redirect:', redirectURL)
     const resultURL = new URL(
         await browser.identity.launchWebAuthFlow({
             url: authorizationURL.toString(),

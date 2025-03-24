@@ -6,7 +6,7 @@ import browser from 'webextension-polyfill';
 import { DiscordAuth } from '../shared/DiscordAuth';
 
 const discordAuth = new DiscordAuth();
-const initDiscordAuth = discordAuth.init()
+const initDiscordAuth = discordAuth.init();
 
 // Subscribe to messages
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -25,4 +25,3 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse(false);
     return true;
 });
-

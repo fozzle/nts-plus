@@ -15,8 +15,9 @@ export enum ActivityTypes {
     LISTENING = 2,
 }
 
-export type DiscordCloseCodes = DiscordReconnectableCloseCodes | DiscordNoReconnectCloseCodes;
-   
+export type DiscordCloseCodes =
+    | DiscordReconnectableCloseCodes
+    | DiscordNoReconnectCloseCodes;
 
 export enum DiscordReconnectableCloseCodes {
     UNKNOWN = 4000,
@@ -61,17 +62,17 @@ export interface DiscordActivity {
     name: string;
     type: number;
     timestamps?: {
-        start?: number,
-        end?: number
-    },
-    details?: string,
-    state?: string
-    application_id?: string,
-    buttons?: {label: string, url: string}[]
+        start?: number;
+        end?: number;
+    };
+    details?: string;
+    state?: string;
+    application_id?: string;
+    buttons?: { label: string; url: string }[];
 }
 
 export interface DiscordUser {
-    id: string,
-    username: string,
-    avatar?: string
+    id: string;
+    username: string;
+    avatar?: string;
 }

@@ -1,7 +1,10 @@
 /**
  * Module responsible for updating Discord presence in response to live player state.
  */
-import { DISCORD_APPLICATION_ID, DISCORD_RP_ASSET_ID } from '../shared/DiscordConstants';
+import {
+    DISCORD_APPLICATION_ID,
+    DISCORD_RP_ASSET_ID,
+} from '../shared/DiscordConstants';
 import {
     DiscordGatewayOpcodes,
     DiscordGatewayMessage,
@@ -126,18 +129,18 @@ class DiscordSocket {
         }
     };
 
-    #handleDisconnect = ({code}: CloseEvent) => {
-        console.info('Discord Socket Disconnected.')
+    #handleDisconnect = ({ code }: CloseEvent) => {
+        console.info('Discord Socket Disconnected.');
         if (code in DiscordReconnectableCloseCodes) {
-            this.#handleReconnect()
+            this.#handleReconnect();
         } else {
-            console.error('Discord socket closed with terminal code', code)            
+            console.error('Discord socket closed with terminal code', code);
         }
-    }
+    };
 
     #handleHello(data: Record<string, unknown>) {
         if (this.#sessionId != null && this.#resumeGatewayURL != null) {
-            return this.#sendResume()
+            return this.#sendResume();
         }
 
         if (this.#heartbeatTimeout) {
@@ -179,7 +182,7 @@ class DiscordSocket {
         this.#resumeGatewayURL = data.resume_gateway_url as string;
         this.#sessionId = data.session_id as string;
         this.#waitReadyResolve();
-        console.info('Discord Socket Connected.')
+        console.info('Discord Socket Connected.');
     }
 
     #sendResume() {
@@ -188,9 +191,9 @@ class DiscordSocket {
             d: {
                 token: `Bearer ${this.#accessToken}`,
                 session_id: this.#sessionId,
-                seq: this.#sequenceNumber
-            }
-        })
+                seq: this.#sequenceNumber,
+            },
+        });
     }
 
     updatePresence(activity?: DiscordActivity) {

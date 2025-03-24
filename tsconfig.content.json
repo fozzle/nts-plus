@@ -1,14 +1,12 @@
 {
     "compilerOptions": {
-      "target": "ES6",
-      "module": "ESNext",
-      "moduleResolution": "bundler",
-      "strict": true,
-      "esModuleInterop": true,
-      "skipLibCheck": true,
-      "outDir": "./dist/content_scripts"
+        "target": "ES6",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "outDir": "./dist/content_scripts"
     },
-    "include": [
-      "src/content_scripts/**/*"
-    ]
+    "include": ["src/content_scripts/**/*"]
 }

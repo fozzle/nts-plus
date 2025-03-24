@@ -13,13 +13,17 @@ window.addEventListener('message', (message) => {
     }
 });
 
-
 const audioMutationObserver = new MutationObserver((_, observer) => {
-  const audioElement = document.querySelector('audio');
-  if (audioElement) {
-    window.parent.postMessage({ ntsPlus: true, type: 'volume_request' }, '*');
-    observer.disconnect();
-  }
+    const audioElement = document.querySelector('audio');
+    if (audioElement) {
+        window.parent.postMessage(
+            { ntsPlus: true, type: 'volume_request' },
+            '*',
+        );
+        observer.disconnect();
+    }
 });
-audioMutationObserver.observe(document.body, {childList: true, subtree: true})
-
+audioMutationObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+});

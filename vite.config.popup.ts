@@ -1,18 +1,20 @@
-import {fileURLToPath} from 'node:url'
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react-swc'
+import { fileURLToPath } from 'node:url';
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react-swc';
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
-  build: {
-    minify: false,
-    rollupOptions: {
-      input: {
-        popup: fileURLToPath(new URL('./popup/popup.html', import.meta.url))
-      }
+    plugins: [react()],
+    build: {
+        minify: false,
+        rollupOptions: {
+            input: {
+                popup: fileURLToPath(
+                    new URL('./popup/popup.html', import.meta.url),
+                ),
+            },
+        },
+        outDir: 'dist/popup',
     },
-    outDir: 'dist/popup'
-  },
-  base: '/popup'
-})
+    base: '/popup',
+});
