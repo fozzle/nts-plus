@@ -1,24 +1,17 @@
 import * as React from 'react';
 
-import { DiscordAuth } from '../shared/DiscordAuth';
 import { DiscordUser } from '../shared/DiscordTypes';
+import * as BackgroundUtils from '../background/BackgroundUtils';
 import styles from './style.module.css';
 
-export default function Authenticated({
-    discordAuthClient,
-    onRevoke,
-}: {
-    onRevoke: () => void;
-    discordAuthClient: DiscordAuth;
-}) {
+export default function Authenticated({ onRevoke }: { onRevoke: () => void }) {
     const [discordInfo, setDiscordInfo] = React.useState<DiscordUser | null>(
         null,
     );
 
     React.useEffect(() => {
         async function loadDiscordUser() {
-            const accessToken =
-                await discordAuthClient.getDiscordAccessToken(false);
+            const { accessToken } = await BackgroundUtils.getToken();
             const userInfo = await (
                 await fetch('https://discord.com/api/users/@me', {
                     method: 'get',

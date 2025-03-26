@@ -68,7 +68,10 @@ export interface DiscordActivity {
     details?: string;
     state?: string;
     application_id?: string;
-    buttons?: { label: string; url: string }[];
+    buttons?: string[];
+    metadata?: {
+        button_urls?: string[];
+    };
 }
 
 export interface DiscordUser {

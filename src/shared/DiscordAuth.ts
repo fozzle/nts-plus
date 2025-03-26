@@ -47,7 +47,7 @@ async function authorizeDiscord() {
         code_challenge: codeChallenge,
     }).toString();
 
-    console.info('Launching authorization with redirect:', redirectURL)
+    console.info('Launching authorization with redirect:', redirectURL);
     const resultURL = new URL(
         await browser.identity.launchWebAuthFlow({
             url: authorizationURL.toString(),
@@ -189,7 +189,11 @@ export class DiscordAuth {
             return;
         }
         await revokeToken(this.accessToken);
-        this.#updateStorageAndCache({accessToken: '', refreshToken: '', expiresIn: -1});
+        this.#updateStorageAndCache({
+            accessToken: '',
+            refreshToken: '',
+            expiresIn: -1,
+        });
     }
 
     async getDiscordAccessToken(allowReauth: boolean): Promise<string | null> {
@@ -202,8 +206,10 @@ export class DiscordAuth {
                 return this.accessToken;
             } else {
                 // Try to refresh if we are nearing expiration
-                const refreshResults = await exchangeRefreshToken(this.refreshToken);
-                this.#updateStorageAndCache(refreshResults)
+                const refreshResults = await exchangeRefreshToken(
+                    this.refreshToken,
+                );
+                this.#updateStorageAndCache(refreshResults);
                 return refreshResults.accessToken;
             }
         }
@@ -214,8 +220,10 @@ export class DiscordAuth {
 
         // New Oauth authorization
         const { accessCode, codeVerifier } = await authorizeDiscord();
-        const exchangeResults =
-            await exchangeAccessCode(accessCode, codeVerifier);
+        const exchangeResults = await exchangeAccessCode(
+            accessCode,
+            codeVerifier,
+        );
         this.#updateStorageAndCache(exchangeResults);
         return exchangeResults.accessToken;
     }
