@@ -13,7 +13,9 @@ export default async function setupDiscordPresencePublisher() {
     if (!discordAccessToken) return;
 
     const discordSocket = new DiscordSocket(discordAccessToken);
-    let lastPresence: DiscordActivity | undefined;
+    // These are the only fields that can change, just want to avoid re-sending presence with new start timestamps
+    // just because something minor changed.
+    let lastPresenceDetails: Pick<DiscordActivity, 'details' | 'state'> | undefined;
     async function updateDiscordPresence(showName: string | null, channel?: 'archive' | 1 | 2) {
         const newPresence =
             showName != null
@@ -37,12 +39,15 @@ export default async function setupDiscordPresencePublisher() {
                 : undefined;
 
         // Lazy deep comparison
-        if (JSON.stringify(lastPresence) === JSON.stringify(newPresence)) {
+        const newPresenceDetails = newPresence
+            ? { details: newPresence.details, state: newPresence.state }
+            : undefined;
+        if (JSON.stringify(lastPresenceDetails) === JSON.stringify(newPresenceDetails)) {
             return;
         }
         await discordSocket.ensureConnected();
         discordSocket.updatePresence(newPresence);
-        lastPresence = newPresence;
+        lastPresenceDetails = newPresenceDetails;
     }
 
     /**
