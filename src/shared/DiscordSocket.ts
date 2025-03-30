@@ -2,7 +2,7 @@ import {
     DiscordGatewayOpcodes,
     DiscordGatewayMessage,
     DiscordActivity,
-    DiscordReconnectableCloseCodes,
+    DiscordNoReconnectCloseCodes,
 } from '../shared/DiscordTypes';
 
 const DISCORD_GATEWAY_URL = 'wss://gateway.discord.gg';
@@ -14,6 +14,7 @@ export class DiscordSocket {
     #resumeGatewayURL: string | undefined;
     #sessionId: string = '';
     #connectPromise?: Promise<void>;
+    #wantsReconnect = true;
     #connectResolve: () => void = () => null;
     #destroyTimeout?: number;
     #heartbeatInterval?: number;
@@ -54,6 +55,7 @@ export class DiscordSocket {
         this.#connectPromise = new Promise((resolve) => {
             this.#connectResolve = resolve;
         });
+        this.#wantsReconnect = true;
         this.#socket = new WebSocket(gatewayURL);
         this.#socket.addEventListener('message', this.#handleSocketMessage);
         this.#socket.addEventListener('close', this.#handleDisconnect);
@@ -78,12 +80,13 @@ export class DiscordSocket {
     };
 
     #handleDisconnect = ({ code }: CloseEvent) => {
-        console.info('Discord Socket Disconnected.');
-        if (code in DiscordReconnectableCloseCodes) {
-            this.#handleReconnect();
-        } else {
+        console.info('Discord Socket Disconnected.', code);
+        if (code in DiscordNoReconnectCloseCodes) {
             console.info('Discord socket closed with terminal code', code);
+            this.#wantsReconnect = false;
             this.#disconnect();
+        } else if (this.#wantsReconnect) {
+            this.#handleReconnect();
         }
     };
 
@@ -118,6 +121,7 @@ export class DiscordSocket {
         this.#socket?.removeEventListener('message', this.#handleSocketMessage);
         this.#socket?.removeEventListener('close', this.#handleDisconnect);
         this.#socket = undefined;
+        console.info('Discord Socket to reconnect.');
 
         setTimeout(() => {
             this.#connect(this.#resumeGatewayURL ?? DISCORD_GATEWAY_URL);
@@ -150,6 +154,7 @@ export class DiscordSocket {
 
     #scheduleDisconnect() {
         this.#destroyTimeout = window.setTimeout(() => {
+            this.#wantsReconnect = false;
             this.#disconnect();
         }, DISCONNECT_TIMEOUT);
     }
@@ -163,6 +168,9 @@ export class DiscordSocket {
         this.#socket = undefined;
         this.#sessionId = '';
         this.#resumeGatewayURL = undefined;
+        if (this.#heartbeatTimeout) {
+            window.clearTimeout(this.#heartbeatTimeout);
+        }
     }
 
     #heartbeat() {
