@@ -76,8 +76,6 @@ export class DiscordSocket {
                 return this.#handleHello(parsed.d);
             case DiscordGatewayOpcodes.RECONNECT:
                 return this.#reconnect();
-            case DiscordGatewayOpcodes.RESUME:
-                return this.#handleResume(parsed.d);
             default:
             // Nothing to do here...
         }
@@ -135,6 +133,8 @@ export class DiscordSocket {
     #handleDispatch(event: string, data: Record<string, unknown>) {
         if (event === 'READY') {
             return this.#handleReady(data);
+        } else if (event === 'RESUMED') {
+            return this.#handleResume();
         }
     }
 
@@ -145,9 +145,7 @@ export class DiscordSocket {
         console.info('Discord Socket Connected.');
     }
 
-    #handleResume(data: Record<string, unknown>) {
-        this.#sessionId = data.session_id as string;
-        this.#sequenceNumber = data.seq as number;
+    #handleResume() {
         this.#connectResolve();
         console.info('Discord Socket Resumed');
         this.onResume?.();
