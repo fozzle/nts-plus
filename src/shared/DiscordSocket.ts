@@ -20,6 +20,8 @@ export class DiscordSocket {
     #heartbeatInterval?: number;
     #heartbeatTimeout?: number;
     #sequenceNumber: number | null = null;
+    // If Firefox ever fixes https://bugzilla.mozilla.org/show_bug.cgi?id=1820521 this can be an EventTarget
+    onResume: (() => void) | undefined = undefined;
 
     constructor(accessToken: string) {
         this.#accessToken = accessToken;
@@ -73,7 +75,9 @@ export class DiscordSocket {
             case DiscordGatewayOpcodes.HELLO:
                 return this.#handleHello(parsed.d);
             case DiscordGatewayOpcodes.RECONNECT:
-                return this.#handleReconnect();
+                return this.#reconnect();
+            case DiscordGatewayOpcodes.RESUME:
+                return this.#handleResume(parsed.d);
             default:
             // Nothing to do here...
         }
@@ -86,7 +90,7 @@ export class DiscordSocket {
             this.#wantsReconnect = false;
             this.#disconnect();
         } else if (this.#wantsReconnect) {
-            this.#handleReconnect();
+            this.#reconnect();
         }
     };
 
@@ -116,10 +120,10 @@ export class DiscordSocket {
         }, this.#heartbeatInterval * Math.random());
     }
 
-    #handleReconnect() {
-        // Tear down old socket without explicitly closing.
+    #reconnect() {
         this.#socket?.removeEventListener('message', this.#handleSocketMessage);
         this.#socket?.removeEventListener('close', this.#handleDisconnect);
+        this.#socket?.close();
         this.#socket = undefined;
         console.info('Discord Socket to reconnect.');
 
@@ -139,6 +143,14 @@ export class DiscordSocket {
         this.#sessionId = data.session_id as string;
         this.#connectResolve();
         console.info('Discord Socket Connected.');
+    }
+
+    #handleResume(data: Record<string, unknown>) {
+        this.#sessionId = data.session_id as string;
+        this.#sequenceNumber = data.seq as number;
+        this.#connectResolve();
+        console.info('Discord Socket Resumed');
+        this.onResume?.();
     }
 
     #sendResume() {
@@ -164,7 +176,9 @@ export class DiscordSocket {
     }
 
     #disconnect() {
-        this.#socket?.close(1000);
+        this.#socket?.removeEventListener('message', this.#handleSocketMessage);
+        this.#socket?.removeEventListener('close', this.#handleDisconnect);
+        this.#socket?.close();
         this.#socket = undefined;
         this.#sessionId = '';
         this.#resumeGatewayURL = undefined;
