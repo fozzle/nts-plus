@@ -27,6 +27,10 @@ export class DiscordSocket {
         this.#accessToken = accessToken;
     }
 
+    hasToken() {
+        return Boolean(this.#accessToken);
+    }
+
     ensureConnected() {
         if (!this.#socket) {
             this.#connect(DISCORD_GATEWAY_URL);
@@ -49,6 +53,11 @@ export class DiscordSocket {
                 afk: false,
             },
         });
+    }
+
+    destroy() {
+        this.#disconnect();
+        this.onResume = undefined;
     }
 
     /** Private */

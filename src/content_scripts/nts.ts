@@ -3,4 +3,5 @@ import setupDiscordPresencePublisher from './discord';
 
 setupVolumeSyncer();
 setupDiscordPresencePublisher();
+
 console.info('NTS Plus Loaded');

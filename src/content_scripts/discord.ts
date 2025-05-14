@@ -6,23 +6,73 @@ import { ActivityTypes, DiscordActivity } from '../shared/DiscordTypes';
 import * as BackgroundUtils from '../background/BackgroundUtils';
 import { DiscordSocket } from '../shared/DiscordSocket';
 import { debounce } from '../shared/debounce';
+import browser from 'webextension-polyfill';
+import { MessageType } from '../shared/Constants';
+import { NTSPlusMessage } from '../shared/Types';
 
-export default async function setupDiscordPresencePublisher() {
-    const { accessToken: discordAccessToken } = await BackgroundUtils.getToken();
+// These are the only fields that can change, just want to avoid re-sending presence with new start timestamps
+// just because something minor changed.
+function pickActivityForComparison(activity: DiscordActivity | undefined) {
+    return activity != null ? { details: activity.details, state: activity.state } : undefined;
+}
 
-    if (!discordAccessToken) return;
+class DiscordPresencePublisher {
+    #discordSocket: DiscordSocket = new DiscordSocket('');
+    #lastPresence: DiscordActivity | undefined;
+    #channelPlayerObserver: MutationObserver;
+    #soundcloudPlayerObserver: MutationObserver;
 
-    function pickForCompare(activity: DiscordActivity | undefined) {
-        return activity != null ? { details: activity.details, state: activity.state } : undefined;
+    constructor(accessToken: string) {
+        this.updateAccessToken(accessToken);
+        this.#channelPlayerObserver = new MutationObserver(() => {
+            console.info('Live Player Update');
+            this.handleMutation();
+        });
+        const livePlayer = document.getElementById('nts-live-header') as HTMLDivElement;
+        this.#channelPlayerObserver.observe(livePlayer, {
+            childList: true,
+            subtree: true,
+        });
+
+        this.#soundcloudPlayerObserver = new MutationObserver(() => {
+            console.info('Soundcloud Player Update');
+            this.handleMutation();
+        });
+        const archivePlayer = document.querySelector('.soundcloud-player') as HTMLDivElement;
+        this.#soundcloudPlayerObserver.observe(archivePlayer, {
+            childList: true,
+            subtree: true,
+        });
+
+        window.addEventListener('message', this.handleWindowMessage);
     }
 
-    const discordSocket = new DiscordSocket(discordAccessToken);
-    discordSocket.onResume = refreshPresence;
+    updateAccessToken(accessToken: string) {
+        this.#discordSocket?.destroy();
+        this.#discordSocket = new DiscordSocket(accessToken);
+        this.#discordSocket.onResume = this.publishLastPresence;
+    }
 
-    // These are the only fields that can change, just want to avoid re-sending presence with new start timestamps
-    // just because something minor changed.
-    let lastPresence: DiscordActivity | undefined;
-    async function updateDiscordPresence(showName: string | null, channel?: 'archive' | 1 | 2) {
+    destroy() {
+        window.removeEventListener('message', this.handleWindowMessage);
+        this.#channelPlayerObserver.disconnect();
+        this.#soundcloudPlayerObserver.disconnect();
+        this.#discordSocket.destroy();
+    }
+
+    handleWindowMessage = (message: MessageEvent) => {
+        const messagePayload = message.data;
+        if (typeof messagePayload !== 'object') return;
+        if (messagePayload.ntsPlus !== true) return;
+        switch (messagePayload.type) {
+            case 'play':
+            case 'pause':
+                console.info('Mixcloud Player Update', messagePayload.type);
+                this.handleMutation(messagePayload.type);
+        }
+    };
+
+    updateCurrentPresence = (showName: string | null, channel?: 'archive' | 1 | 2) => {
         const newPresence =
             showName != null
                 ? {
@@ -46,31 +96,25 @@ export default async function setupDiscordPresencePublisher() {
 
         // Lazy mans deep comparison
         if (
-            JSON.stringify(pickForCompare(newPresence)) ===
-            JSON.stringify(pickForCompare(lastPresence))
+            JSON.stringify(pickActivityForComparison(newPresence)) ===
+            JSON.stringify(pickActivityForComparison(this.#lastPresence))
         ) {
-            return;
+            return Promise.resolve();
         }
-        await discordSocket.ensureConnected();
-        discordSocket.updatePresence(newPresence);
-        lastPresence = newPresence;
-    }
-
-    async function refreshPresence() {
-        console.info('Refreshing Presence');
-        discordSocket.updatePresence(lastPresence);
-    }
+        this.#lastPresence = newPresence;
+        return this.publishLastPresence();
+    };
 
     /**
      * Since we're essentially scraping, wait a bit to ensure HTML state has settled before determining
      * what we're listening to.
      */
-    const handleMutation = debounce((mixCloudEvent?: 'play' | 'pause') => {
+    handleMutation = debounce((mixCloudEvent?: 'play' | 'pause') => {
         const playingChannel = document.querySelector('.live-channel--playing');
         const activeSoundcloudPlayer = document.querySelector(
             '.soundcloud-player:not(.visually-hidden)',
         );
-        let channelNumber: Parameters<typeof updateDiscordPresence>[1];
+        let channelNumber: Parameters<typeof this.updateCurrentPresence>[1];
         let showName: string | null = null;
 
         if (playingChannel) {
@@ -91,41 +135,35 @@ export default async function setupDiscordPresencePublisher() {
             showName = document.querySelector('.expanded-episode-player h2')?.textContent ?? null;
         }
 
-        console.info('Updating Discord presence', showName, channelNumber);
-        updateDiscordPresence(showName, channelNumber);
+        console.info('NTS Plus: Listening to', showName, 'on', channelNumber);
+        this.updateCurrentPresence(showName, channelNumber);
     }, 1000);
 
-    const channelPlayerObserver = new MutationObserver(() => {
-        console.info('Live Player Update');
-        handleMutation();
-    });
-    const livePlayer = document.getElementById('nts-live-header') as HTMLDivElement;
-    channelPlayerObserver.observe(livePlayer, {
-        childList: true,
-        subtree: true,
-    });
+    publishLastPresence = async () => {
+        if (this.#discordSocket.hasToken()) {
+            console.info('NTS Plus publishing Discord presence');
+            await this.#discordSocket.ensureConnected();
+            this.#discordSocket.updatePresence(this.#lastPresence);
+        }
+    };
+}
 
-    const soundcloudPlayerObserver = new MutationObserver(() => {
-        console.info('Soundcloud Player Update');
-        handleMutation();
-    });
-    const archivePlayer = document.querySelector('.soundcloud-player') as HTMLDivElement;
-    soundcloudPlayerObserver.observe(archivePlayer, {
-        childList: true,
-        subtree: true,
-    });
-
-    window.addEventListener('message', (message) => {
-        const messagePayload = message.data;
-        if (typeof messagePayload !== 'object') return;
-        if (messagePayload.ntsPlus !== true) return;
-        switch (messagePayload.type) {
-            case 'play':
-            case 'pause':
-                console.info('Mixcloud Player Update', messagePayload.type);
-                handleMutation(messagePayload.type);
+export default async function setupDiscordPresencePublisher() {
+    browser.runtime.onMessage.addListener((message: unknown, sender: any) => {
+        if (sender.id !== browser.runtime.id) return;
+        let messageCast = message as NTSPlusMessage;
+        switch (messageCast.type) {
+            case MessageType.TOKEN_UPDATE:
+                presencePublisher.updateAccessToken(messageCast.accessToken);
+                presencePublisher.publishLastPresence();
+                return;
+            default:
+                return;
         }
     });
+
+    const { accessToken } = await BackgroundUtils.getToken();
+    const presencePublisher = new DiscordPresencePublisher(accessToken);
 
     console.info('Loaded Discord presence module...');
 }

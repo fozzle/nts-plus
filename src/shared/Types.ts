@@ -9,4 +9,8 @@ export type NTSPlusMessage =
       }
     | {
           type: MessageType.REVOKE_TOKENS;
+      }
+    | {
+          type: MessageType.TOKEN_UPDATE;
+          accessToken: string;
       };

@@ -10,10 +10,7 @@ const DiscordOAuthEndpoints = {
 };
 
 async function generateCodeChallenge(codeVerifier: string) {
-    var digest = await crypto.subtle.digest(
-        'SHA-256',
-        new TextEncoder().encode(codeVerifier),
-    );
+    var digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(codeVerifier));
     return btoa(String.fromCharCode(...new Uint8Array(digest)))
         .replace(/=/g, '')
         .replace(/\+/g, '-')
@@ -22,8 +19,7 @@ async function generateCodeChallenge(codeVerifier: string) {
 
 function generateRandomString(length: number) {
     var text = '';
-    var possible =
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
     for (var i = 0; i < length; i++) {
         text += possible.charAt(Math.floor(Math.random() * possible.length));
@@ -129,10 +125,11 @@ async function revokeToken(accessToken: string) {
 }
 
 export class DiscordAuth {
-    private accessToken: string = '';
+    #accessToken: string = '';
     private refreshToken: string = '';
     private expiration: number = -1;
     private initialized = false;
+    #onTokenUpdated: ((token: string) => void) | undefined;
 
     async init() {
         const result = await browser.storage.sync.get({
@@ -148,12 +145,23 @@ export class DiscordAuth {
         browser.storage.sync.onChanged.addListener(this.#handleStorageChange);
     }
 
-    #handleStorageChange = (
-        changes: Record<string, { newValue?: unknown }>,
-    ) => {
+    private get accessToken() {
+        return this.#accessToken;
+    }
+
+    private set accessToken(newToken: string) {
+        this.#accessToken = newToken;
+        this.#onTokenUpdated?.(newToken);
+    }
+
+    onTokenUpdated = (callback: (token: string) => void) => {
+        this.#onTokenUpdated = callback;
+    };
+
+    #handleStorageChange = (changes: Record<string, { newValue?: unknown }>) => {
         for (let [key, { newValue }] of Object.entries(changes)) {
             if (newValue == null) continue;
-            if (key === 'accessToken') {
+            if (key === 'accessToken' && newValue !== this.accessToken) {
                 this.accessToken = newValue as string;
             } else if (key === 'refreshToken') {
                 this.refreshToken = newValue as string;
@@ -172,7 +180,7 @@ export class DiscordAuth {
         refreshToken: string;
         expiresIn: number;
     }) {
-        const expiration = Date.now() + expiresIn;
+        const expiration = Date.now() + expiresIn * 1000;
 
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
@@ -196,34 +204,29 @@ export class DiscordAuth {
         });
     }
 
-    async getDiscordAccessToken(allowReauth: boolean): Promise<string | null> {
+    async getDiscordAccessToken(allowReauth: boolean): Promise<string> {
         if (!this.initialized) {
             throw new Error('Trying to read from uninitialized DiscordAuth');
         }
 
         if (this.accessToken) {
-            if (this.expiration < Date.now() - EXPIRATION_TOLERANCE_MS) {
+            if (this.expiration > Date.now() + EXPIRATION_TOLERANCE_MS) {
                 return this.accessToken;
-            } else {
-                // Try to refresh if we are nearing expiration
-                const refreshResults = await exchangeRefreshToken(
-                    this.refreshToken,
-                );
-                this.#updateStorageAndCache(refreshResults);
-                return refreshResults.accessToken;
             }
+
+            // Try to refresh if we are nearing expiration
+            const refreshResults = await exchangeRefreshToken(this.refreshToken);
+            this.#updateStorageAndCache(refreshResults);
+            return refreshResults.accessToken;
         }
 
         if (!allowReauth) {
-            return null;
+            return '';
         }
 
         // New Oauth authorization
         const { accessCode, codeVerifier } = await authorizeDiscord();
-        const exchangeResults = await exchangeAccessCode(
-            accessCode,
-            codeVerifier,
-        );
+        const exchangeResults = await exchangeAccessCode(accessCode, codeVerifier);
         this.#updateStorageAndCache(exchangeResults);
         return exchangeResults.accessToken;
     }
