@@ -6,9 +6,7 @@ import Education from './Education';
 import style from './style.module.css';
 
 function PopUp() {
-    const [isAuthenticated, setIsAuthenticated] = React.useState<
-        boolean | undefined
-    >();
+    const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | undefined>();
     const [isAuthenticating, setIsAuthenticating] = React.useState(false);
 
     React.useEffect(() => {
@@ -20,15 +18,21 @@ function PopUp() {
     }, []);
 
     async function handleRevoke() {
-        await BackgroundUtils.revokeTokens();
-        setIsAuthenticated(false);
+        try {
+            await BackgroundUtils.revokeTokens();
+        } finally {
+            setIsAuthenticated(false);
+        }
     }
 
     async function handleAuth() {
         setIsAuthenticating(true);
-        await BackgroundUtils.getTokenWithAuth();
-        setIsAuthenticating(false);
-        setIsAuthenticated(true);
+        try {
+            await BackgroundUtils.getTokenWithAuth();
+            setIsAuthenticated(true);
+        } finally {
+            setIsAuthenticating(false);
+        }
     }
 
     if (isAuthenticated == null) {

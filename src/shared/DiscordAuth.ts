@@ -3,6 +3,9 @@ import { DISCORD_APPLICATION_ID } from './DiscordConstants';
 
 const EXPIRATION_TOLERANCE_MS = 1000 * 60 * 60;
 
+class TokenExpiredError extends Error {}
+class TokenExchangeFailedError extends Error {}
+
 const DiscordOAuthEndpoints = {
     AUTHORIZE: 'https://discord.com/oauth2/authorize',
     TOKEN: 'https://discord.com/api/oauth2/token',
@@ -53,7 +56,7 @@ async function authorizeDiscord() {
     console.log('NTS-Plus', 'Authorization complete.');
     const accessCode = resultURL.searchParams.get('code');
     if (!accessCode) {
-        throw new Error("Didn't receive access code");
+        throw new TokenExchangeFailedError("Didn't receive access code");
     }
     return { accessCode, codeVerifier };
 }
@@ -70,18 +73,22 @@ async function exchangeAccessCode(
         redirect_uri: browser.identity.getRedirectURL(),
         code: accessCode,
     }).toString();
-    const resp = await (
-        await fetch(tokenURL.toString(), {
-            method: 'post',
-            headers: { 'Content-type': 'application/x-www-form-urlencoded' },
-            body,
-        })
-    ).json();
+    const resp = await fetch(tokenURL.toString(), {
+        method: 'post',
+        headers: { 'Content-type': 'application/x-www-form-urlencoded' },
+        body,
+    });
+
+    if (!resp.ok) {
+        throw new TokenExchangeFailedError('Failed to exchange access code');
+    }
+
+    const tokenData = await resp.json();
 
     return {
-        accessToken: resp.access_token,
-        refreshToken: resp.refresh_token,
-        expiresIn: resp.expires_in,
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token,
+        expiresIn: tokenData.expires_in,
     };
 }
 
@@ -95,18 +102,25 @@ async function exchangeRefreshToken(
         redirect_uri: browser.identity.getRedirectURL(),
         refresh_token: refreshToken,
     }).toString();
-    const resp = await (
-        await fetch(tokenURL.toString(), {
-            method: 'post',
-            headers: { 'Content-type': 'application/x-www-form-urlencoded' },
-            body,
-        })
-    ).json();
+
+    const resp = await fetch(tokenURL.toString(), {
+        method: 'post',
+        headers: { 'Content-type': 'application/x-www-form-urlencoded' },
+        body,
+    });
+
+    if (!resp.ok) {
+        if (resp.status === 401) {
+            throw new TokenExpiredError();
+        }
+    }
+
+    const json = await resp.json();
 
     return {
-        accessToken: resp.access_token,
-        refreshToken: resp.refresh_token,
-        expiresIn: resp.expires_in,
+        accessToken: json.access_token,
+        refreshToken: json.refresh_token,
+        expiresIn: json.expires_in,
     };
 }
 
@@ -215,9 +229,15 @@ export class DiscordAuth {
             }
 
             // Try to refresh if we are nearing expiration
-            const refreshResults = await exchangeRefreshToken(this.refreshToken);
-            this.#updateStorageAndCache(refreshResults);
-            return refreshResults.accessToken;
+            try {
+                const refreshResults = await exchangeRefreshToken(this.refreshToken);
+                this.#updateStorageAndCache(refreshResults);
+                return refreshResults.accessToken;
+            } catch (e) {
+                if (e instanceof TokenExpiredError) {
+                    this.revokeTokens();
+                }
+            }
         }
 
         if (!allowReauth) {

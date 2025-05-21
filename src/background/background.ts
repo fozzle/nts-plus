@@ -33,8 +33,12 @@ async function init() {
             case MessageType.GET_TOKEN: {
                 async function getToken() {
                     await initDiscordAuth;
-                    const token = await discordAuth.getDiscordAccessToken(false);
-                    sendResponse({ accessToken: token });
+                    try {
+                        const token = await discordAuth.getDiscordAccessToken(false);
+                        sendResponse({ accessToken: token });
+                    } catch (e) {
+                        sendResponse({ accessToken: '' });
+                    }
                 }
                 getToken();
                 return true;
@@ -42,8 +46,12 @@ async function init() {
             case MessageType.LAUNCH_AUTHORIZATION: {
                 async function authorizeAndGetToken() {
                     await initDiscordAuth;
-                    const token = await discordAuth.getDiscordAccessToken(true);
-                    sendResponse({ accessToken: token });
+                    try {
+                        const token = await discordAuth.getDiscordAccessToken(true);
+                        sendResponse({ accessToken: token });
+                    } catch (e) {
+                        sendResponse({ accessToken: '' });
+                    }
                 }
                 authorizeAndGetToken();
                 return true;

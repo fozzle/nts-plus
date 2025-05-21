@@ -2,12 +2,8 @@
  * Module responsible for syncing volume between live volume input and archive players.
  */
 export default function setupVolumeSyncer() {
-    const audioPlayer = document.getElementById(
-        'nts-player-audio',
-    ) as HTMLAudioElement;
-    const episodePlayer = document.querySelector(
-        '.episode-player__player',
-    ) as HTMLDivElement;
+    const audioPlayer = document.getElementById('nts-player-audio') as HTMLAudioElement;
+    const episodePlayer = document.querySelector('.episode-player__player') as HTMLDivElement;
 
     function applyMainVolume() {
         const volume = audioPlayer.volume;
@@ -21,10 +17,7 @@ export default function setupVolumeSyncer() {
         const mixcloudFrame = document?.querySelector(
             '.mixcloud-player__iframe-container iframe',
         ) as HTMLIFrameElement;
-        mixcloudFrame?.contentWindow?.postMessage(
-            { ntsPlus: true, type: 'volume', volume },
-            '*',
-        );
+        mixcloudFrame?.contentWindow?.postMessage({ ntsPlus: true, type: 'volume', volume }, '*');
     }
 
     window.addEventListener('message', (message) => {
@@ -47,4 +40,6 @@ export default function setupVolumeSyncer() {
 
     audioPlayer.addEventListener('volumechange', applyMainVolume);
     console.info('Loaded volume syncer module...');
+
+    return Promise.resolve();
 }
