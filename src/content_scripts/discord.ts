@@ -148,22 +148,23 @@ class DiscordPresencePublisher {
     };
 }
 
-export default async function setupDiscordPresencePublisher() {
-    browser.runtime.onMessage.addListener((message: unknown, sender: any) => {
-        if (sender.id !== browser.runtime.id) return;
-        let messageCast = message as NTSPlusMessage;
-        switch (messageCast.type) {
-            case MessageType.TOKEN_UPDATE:
-                presencePublisher.updateAccessToken(messageCast.accessToken);
-                presencePublisher.publishLastPresence();
-                return;
-            default:
-                return;
-        }
-    });
+let presencePublisher: DiscordPresencePublisher | undefined;
+browser.runtime.onMessage.addListener((message: unknown, sender: any) => {
+    if (sender.id !== browser.runtime.id) return;
+    let messageCast = message as NTSPlusMessage;
+    switch (messageCast.type) {
+        case MessageType.TOKEN_UPDATE:
+            presencePublisher?.updateAccessToken(messageCast.accessToken);
+            presencePublisher?.publishLastPresence();
+            return;
+        default:
+            return;
+    }
+});
 
+export default async function setupDiscordPresencePublisher() {
     const { accessToken } = await BackgroundUtils.getToken();
-    const presencePublisher = new DiscordPresencePublisher(accessToken);
+    presencePublisher = new DiscordPresencePublisher(accessToken);
 
     console.info('Loaded Discord presence module...');
 }
